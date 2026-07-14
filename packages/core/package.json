@@ -1,0 +1,8 @@
+{
+  "name": "@cincoscribe/core",
+  "version": "1.0.0",
+  "description": "Shared types, schemas, and business logic for CincoScribe",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "license": "MIT"
+}

@@ -74,6 +74,7 @@ typings/
 .parcel-cache
 
 # Electron builder output
+build-dist/
 dist/
 dist-zip/
 out/
@@ -88,6 +89,26 @@ Desktop.ini
 
 # IDEs and Editors
 .idea/
+.agents/
+.claude/
+.codex/
+.github/
 .vscode/
 *.swp
 *.swo
+# Python
+__pycache__/
+*.py[cod]
+*.class
+
+# Models and large files
+models/
+packages/desktop/backend/models/
+*.pt
+*.pth
+*.onnx
+*.bin
+*.ckpt
+*.safetensors
+*.tar.bz2
+*.wav

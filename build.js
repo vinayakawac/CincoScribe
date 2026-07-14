@@ -24,7 +24,8 @@ async function build() {
     'invalid.html',
     'offline-expired.html',
     'package.json',
-    'electron-builder.yml'
+    'electron-builder.yml',
+    'tts_generate.py'
   ];
 
   for (const item of filesToCopy) {
@@ -79,6 +80,19 @@ async function build() {
       cwd: buildDir,
       stdio: 'inherit'
     });
+    
+    // Copy output artifacts to the root dist folder
+    const mainDistDir = path.join(sourceDir, 'dist');
+    const buildDistOutDir = path.join(buildDir, 'dist');
+    if (fs.existsSync(buildDistOutDir)) {
+      console.log('Copying build artifacts back to root dist folder...');
+      if (fs.existsSync(mainDistDir)) {
+        fs.removeSync(mainDistDir);
+      }
+      fs.copySync(buildDistOutDir, mainDistDir);
+      console.log('Artifacts copied to:', mainDistDir);
+    }
+    
     console.log('Build completed successfully!');
   } catch (err) {
     console.error('Build failed:', err);

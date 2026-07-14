@@ -1,0 +1,19 @@
+[project]
+name = "cincoscribe-backend"
+version = "1.0.0"
+description = "CincoScribe FastAPI sidecar — TTS and ASR backends"
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "faster-whisper>=1.0.3",
+    "sherpa-onnx>=1.10.0",
+    "soundfile>=0.12.1",
+    "numpy>=1.26.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27.0",
+]

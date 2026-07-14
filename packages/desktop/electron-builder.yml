@@ -1,0 +1,22 @@
+appId: com.cincoscribe.desktop
+productName: CincoScribe
+directories:
+  buildResources: build-dist
+  output: dist
+files:
+  - "**/*"
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme,test,__tests__,tests}"
+  - "!backend/**/__pycache__/**"
+  - "!backend/**/*.pyc"
+  - "!backend/.venv/**"
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerHeaderIcon: build-dist/icon.ico
+  installerIcon: build-dist/icon.ico
+  uninstallerIcon: build-dist/icon.ico

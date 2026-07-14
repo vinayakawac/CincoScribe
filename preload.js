@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   activationComplete: () => ipcRenderer.send('activation-complete'),
   deactivate: (key) => ipcRenderer.invoke('deactivate', key),
   clearActivation: () => ipcRenderer.send('clear-activation'),
-  deactivationComplete: () => ipcRenderer.send('deactivation-complete')
+  deactivationComplete: () => ipcRenderer.send('deactivation-complete'),
+  generateSpeech: (payload) => ipcRenderer.invoke('generate-speech', payload)
 });

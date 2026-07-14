@@ -204,3 +204,121 @@ ipcMain.on('deactivation-complete', () => {
   if (mainWindow) mainWindow.close();
   mainWindow = createWindow('activation.html', 400, 500, false);
 });
+
+ipcMain.handle('generate-speech', async (event, { text, voice, speed, modelSize }) => {
+  const fs = require('fs');
+  const { spawn } = require('child_process');
+  
+  const modelNameMap = {
+    nano: 'KittenML/kitten-tts-nano-0.8',
+    micro: 'KittenML/kitten-tts-micro-0.8',
+    mini: 'KittenML/kitten-tts-mini-0.8'
+  };
+  const modelName = modelNameMap[modelSize] || modelNameMap.nano;
+
+  const tempWavPath = path.join(app.getPath('temp'), `tts_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.wav`);
+  const scriptPath = path.join(__dirname, 'tts_generate.py');
+
+  return new Promise((resolve) => {
+    // Per rules: "Always run python using the command py instead of python"
+    const pythonExe = process.platform === 'win32' ? 'py' : 'python3';
+    const child = spawn(pythonExe, ['-u', scriptPath]);
+
+    let stdoutData = '';
+    let stderrData = '';
+
+    child.stdout.on('data', (data) => {
+      stdoutData += data.toString();
+    });
+
+    child.stderr.on('data', (data) => {
+      stderrData += data.toString();
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        log.error(`TTS process exited with code ${code}. Stderr: ${stderrData}`);
+        resolve({ success: false, error: stderrData || `Process exited with code ${code}` });
+        return;
+      }
+      try {
+        const result = JSON.parse(stdoutData.trim());
+        if (result.success && result.output_path) {
+          const audioBuffer = fs.readFileSync(result.output_path);
+          const base64Audio = audioBuffer.toString('base64');
+          try {
+            fs.unlinkSync(result.output_path);
+          } catch (e) {
+            log.error(`Failed to delete temp file: ${result.output_path}`, e);
+          }
+          resolve({
+            success: true,
+            duration: result.duration,
+            word_count: result.word_count,
+            audioData: base64Audio
+          });
+        } else {
+          resolve(result);
+        }
+      } catch (err) {
+        log.error(`Failed to parse TTS stdout: ${stdoutData}. Error: ${err.message}`);
+        resolve({ success: false, error: `Invalid output from generator script: ${stdoutData}` });
+      }
+    });
+
+    child.on('error', (err) => {
+      log.error(`Failed to start TTS process: ${err.message}`);
+      if (err.code === 'ENOENT' && pythonExe === 'py') {
+        log.info('py not found, retrying with python...');
+        const retryChild = spawn('python', ['-u', scriptPath]);
+        let retryStdout = '';
+        let retryStderr = '';
+
+        retryChild.stdout.on('data', (data) => { retryStdout += data.toString(); });
+        retryChild.stderr.on('data', (data) => { retryStderr += data.toString(); });
+
+        retryChild.on('close', (code) => {
+          if (code !== 0) {
+            resolve({ success: false, error: retryStderr || `Process exited with code ${code}` });
+            return;
+          }
+          try {
+            const result = JSON.parse(retryStdout.trim());
+            if (result.success && result.output_path) {
+              const audioBuffer = fs.readFileSync(result.output_path);
+              const base64Audio = audioBuffer.toString('base64');
+              try {
+                fs.unlinkSync(result.output_path);
+              } catch (e) {
+                log.error(`Failed to delete temp file: ${result.output_path}`, e);
+              }
+              resolve({
+                success: true,
+                duration: result.duration,
+                word_count: result.word_count,
+                audioData: base64Audio
+              });
+            } else {
+              resolve(result);
+            }
+          } catch (e) {
+            resolve({ success: false, error: `Invalid output: ${retryStdout}` });
+          }
+        });
+
+        retryChild.on('error', (retryErr) => {
+          resolve({ success: false, error: `Python not found: ${retryErr.message}` });
+        });
+
+        retryChild.stdin.write(JSON.stringify({ text, voice, speed, model_name: modelName, output_path: tempWavPath }));
+        retryChild.stdin.end();
+        return;
+      }
+      resolve({ success: false, error: `Failed to start Python process: ${err.message}` });
+    });
+
+    child.stdin.write(JSON.stringify({ text, voice, speed, model_name: modelName, output_path: tempWavPath }));
+    child.stdin.end();
+  });
+});
+

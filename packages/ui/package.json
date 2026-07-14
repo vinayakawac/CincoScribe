@@ -1,0 +1,16 @@
+{
+  "name": "@cincoscribe/ui",
+  "version": "1.0.0",
+  "description": "Shared React + Tailwind components for CincoScribe",
+  "main": "src/index.jsx",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "keywords": ["cincoscribe", "ui", "react", "tailwind"]
+}
