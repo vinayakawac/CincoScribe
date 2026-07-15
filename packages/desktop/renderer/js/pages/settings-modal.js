@@ -85,7 +85,7 @@ async function renderSettingsPage(container) {
           <p style="font-size: 13px; color: var(--clr-text-muted); margin: 0 0 12px 0;">
             CincoScribe is free and open-source. If it's useful to you, consider supporting development.
           </p>
-          <a href="https://ko-fi.com/cincoscribe" target="_blank" rel="noopener noreferrer"
+          <a href="https://ko-fi.com/vinayaka" target="_blank" rel="noopener noreferrer"
              style="display: inline-flex; align-items: center; gap: 8px; background: #FF5E5B; color: white; padding: 8px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">
             Support on Ko-fi
           </a>
