@@ -336,57 +336,25 @@ function renderTranscribePage(container) {
     render();
 
     try {
-      const whisper = window.WhisperTranscriber;
-
-      if (!whisper) {
-        throw new Error('WhisperTranscriber not found. Please refresh the page.');
+      if (!window.cincoscribe) {
+        throw new Error('Sidecar API not available. Please restart the app.');
+      }
+      
+      const audioPath = selectedFile.path;
+      if (!audioPath) {
+        throw new Error('Cannot get local file path.');
       }
 
-      const useOpenAI = !!(typeof AppState !== 'undefined' && AppState.openAiKey);
+      const modelSize = mode === 'accuracy' ? 'base' : 'tiny';
 
-      // Step 1: Load model if using local transcription
-      if (!useOpenAI) {
-        const targetModel = whisper.models[mode] || whisper.models.fast;
-        const modelSize = mode === 'accuracy' ? '~74MB' : '~40MB';
+      updateProgress('Transcribing audio via sidecar (' + modelSize + ')...', 50);
 
-        if (!whisper.isReady || whisper.currentLoadedModel !== targetModel) {
-          updateProgress('Downloading Whisper AI model (' + modelSize + ')... First time only.', 0);
-
-          let lastFileProgress = {};
-          await whisper.loadModel(mode, (data) => {
-            if (data.status === 'progress' && data.file) {
-              lastFileProgress[data.file] = data.progress || 0;
-              const values = Object.values(lastFileProgress);
-              const avg = values.reduce((a, b) => a + b, 0) / values.length;
-              updateProgress(
-                'Downloading model: ' + data.file.split('/').pop() + '...',
-                Math.min(avg * 0.5, 50)
-              );
-            } else if (data.status === 'ready') {
-              updateProgress('Model loaded! Starting transcription...', 50);
-            }
-          });
-        }
-
-        // Double-check the model actually loaded
-        if (!whisper.isReady) {
-          throw new Error('Model failed to load. Please refresh the page and try again.');
-        }
-      }
-
-      // Step 2: Transcribe
-      if (!useOpenAI) {
-        updateProgress('Transcribing audio with local Whisper AI (' + mode + ' mode)... This may take a minute.', 55);
-      }
-
-      const result = await whisper.transcribe(selectedFile, language, mode, (msg, pct, liveChunk) => {
-        updateProgress(msg, pct, liveChunk);
-      });
+      const result = await window.cincoscribe.transcribe(audioPath, language, modelSize);
 
       updateProgress('Processing results...', 95);
 
       // Step 3: Parse results
-      const chunks = result.chunks || [];
+      const chunks = result.segments || [];
       const fullText = result.text || '';
       const wordCount = fullText.split(/\s+/).filter(w => w.length > 0).length;
       const duration = fileDuration || 60;
@@ -395,7 +363,7 @@ function renderTranscribePage(container) {
       let formatted;
       if (chunks.length > 0) {
         formatted = chunks.map(chunk => {
-          const start = chunk.timestamp?.[0] ?? 0;
+          const start = chunk.start || 0;
           return '[' + Utils.formatTimestamp(start) + '] ' + chunk.text.trim();
         }).join('\n');
       } else {

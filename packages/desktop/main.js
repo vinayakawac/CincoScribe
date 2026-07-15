@@ -71,10 +71,10 @@ function pythonExe() {
  */
 function spawnSidecar() {
   const backendDir = path.join(__dirname, 'backend');
-  const serverScript = path.join(backendDir, 'server.py');
+  const serverScript = path.join(backendDir, 'main.py');
 
   // uv run ensures the venv defined by pyproject.toml is used.
-  // Fallback: py server.py if uv is unavailable (dev convenience).
+  // Fallback: py main.py if uv is unavailable (dev convenience).
   const [cmd, args] = process.platform === 'win32'
     ? ['uv', ['run', serverScript]]
     : ['uv', ['run', serverScript]];

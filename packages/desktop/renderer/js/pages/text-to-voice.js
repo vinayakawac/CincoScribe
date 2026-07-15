@@ -265,25 +265,9 @@ function renderTextToVoicePage(container) {
     try {
       updateProgress('Loading voice model and synthesis pipeline...', 25);
 
-      // GATE 4: Call sidecar HTTP endpoint — no raw Python spawn via IPC.
-      const sidecarPort = await window.electronAPI.getSidecarPort();
-      const fetchRes = await fetch(`http://127.0.0.1:${sidecarPort}/tts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: text.trim(),
-          voice: selectedVoice,
-          speed: speed,
-        }),
-      });
-
-      if (!fetchRes.ok) {
-        const errBody = await fetchRes.json().catch(() => ({}));
-        throw new Error(errBody.detail || `Sidecar error ${fetchRes.status}`);
-      }
-
-      // Sidecar returns audio/wav bytes directly
-      const wavBytes = await fetchRes.arrayBuffer();
+      // Call sidecar via preload API
+      if (!window.cincoscribe) throw new Error("Sidecar API not found");
+      const wavBytes = await window.cincoscribe.tts(text.trim(), selectedVoice);
       const base64Audio = btoa(
         new Uint8Array(wavBytes).reduce((data, byte) => data + String.fromCharCode(byte), '')
       );
