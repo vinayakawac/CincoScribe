@@ -36,6 +36,25 @@ MODEL_FOLDER_MAP = {
     "tada_3b": "models--Qwen--Qwen3-1.7B"
 }
 
+# Expected model sizes in bytes
+MODEL_SIZES_BYTES = {
+    "base": 281 * 1024 * 1024,
+    "small": 922 * 1024 * 1024,
+    "medium": 1500 * 1024 * 1024,
+    "large": 3000 * 1024 * 1024,
+    "turbo": 1600 * 1024 * 1024,
+    "kokoro": 82 * 1024 * 1024,
+    "qwen_1_7b": 3400 * 1024 * 1024,
+    "qwen_0_6b": 1200 * 1024 * 1024,
+    "qwen_custom_1_7b": 3400 * 1024 * 1024,
+    "qwen_custom_0_6b": 1200 * 1024 * 1024,
+    "luxtts": 45 * 1024 * 1024,
+    "chatterbox_tts": 350 * 1024 * 1024,
+    "chatterbox_turbo": 180 * 1024 * 1024,
+    "tada_1b": 2000 * 1024 * 1024,
+    "tada_3b": 6000 * 1024 * 1024
+}
+
 # Tracking active background downloads
 active_downloads = set()
 download_errors = {}
@@ -60,6 +79,32 @@ def check_model_downloaded(key: str) -> bool:
 
 @router.get("/engines/models/status")
 def get_models_status():
+    progress = {}
+    for key in list(active_downloads):
+        parts = key.split(":")
+        if len(parts) == 2:
+            m_type, m_name = parts
+            folder_name = MODEL_FOLDER_MAP.get(m_name)
+            if folder_name:
+                path = models_dir / folder_name
+                total = MODEL_SIZES_BYTES.get(m_name, 100 * 1024 * 1024)
+                if path.exists():
+                    downloaded = sum(f.stat().st_size for f in path.glob('**/*') if f.is_file())
+                    if downloaded > total:
+                        total = downloaded
+                    pct = int((downloaded / total) * 100) if total > 0 else 0
+                    progress[key] = {
+                        "downloaded": downloaded,
+                        "total": total,
+                        "percentage": pct
+                    }
+                else:
+                    progress[key] = {
+                        "downloaded": 0,
+                        "total": total,
+                        "percentage": 5
+                    }
+
     return {
         "asr": {
             "base": check_model_downloaded("base"),
@@ -81,6 +126,7 @@ def get_models_status():
             "kokoro": check_model_downloaded("kokoro")
         },
         "downloading": list(active_downloads),
+        "progress": progress,
         "errors": download_errors,
         "current_models_dir": str(models_dir)
     }
@@ -140,6 +186,23 @@ def download_model(payload: DownloadPayload):
     thread.start()
     
     return {"status": "started", "message": f"Model {payload.model_name} download started in background"}
+
+@router.post("/engines/models/delete")
+def delete_model(payload: DownloadPayload):
+    folder_name = MODEL_FOLDER_MAP.get(payload.model_name)
+    if not folder_name:
+        raise HTTPException(status_code=400, detail="Invalid model name")
+        
+    path = models_dir / folder_name
+    if not path.exists():
+        return {"status": "success", "message": "Model folder does not exist"}
+        
+    try:
+        import shutil
+        shutil.rmtree(path)
+        return {"status": "success", "message": f"Model {payload.model_name} removed successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to remove model: {e}")
 
 @router.post("/settings/models-dir")
 def change_models_dir(payload: SettingsPayload):
